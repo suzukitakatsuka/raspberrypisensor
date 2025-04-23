@@ -1,13 +1,16 @@
 import json
 import random
 import time
-from datetime import datetime
+from datetime import datetime, timedelta
 import re
 import csv
-# import socket
+import os
 import sqlite3
 import matplotlib.pyplot as plt
 import japanize_matplotlib
+from waitress import serve
+import logging
+logging.basicConfig(level=logging.DEBUG)
 
 from flask import Flask, Response, render_template, stream_with_context, jsonify, request
 
@@ -16,40 +19,17 @@ random.seed()  # Initialize the random number generator
 raspi_data = '0 0 0'
 raspi_data1 = '0 0 0'
 sensordata = 0
-
-# # conn = sqlite3.connect('sensor.db')
-# conn1 = sqlite3.connect('sensor4.db')
-# # cur = conn.cursor()
-# cur1 = conn1.cursor()
-# # cur.execute('INSERT INTO sensor (day, temperature, humidity, pressure) VALUES (?,?,?,?)', (11,raspi_data,raspi_data,raspi_data))
-# cur1.execute('INSERT INTO sensor (temperature, humidity, pressure) VALUES (?,?,?)', (raspi_data,raspi_data,raspi_data))
-# cur1.execute('select * from sensor')
-# # sensordata1 = cur.fetchall()
-# sensordata2 = cur1.fetchall()
-# # print("chenchenchen123212",cur.fetchall())
-# # print("chenchen",sensordata1[100])
-# print("chenchay123",sensordata2)
-# conn1.commit()
-# conn1.close()
 def timer():
     t = time.time()  # UNIX時間（1970/01/01 00:00:00からの経過時刻）を取得
     local_time = time.localtime(t)  # ローカル時刻をtime.struct_time型として取得
     asc_time = time.asctime(local_time)  # 上のlocal_timeを文字列表現に変換
     dt = datetime.now().strptime(asc_time, '%a %b %d %H:%M:%S %Y')
-    # dt = datetime.now().strptime(asc_time, '%a %b %d %H:%M:%S %Y')
     return dt
 
 nowtime = timer()
 conn1 = sqlite3.connect('sensor4.db')
-# cur = conn.cursor()
 cur1 = conn1.cursor()
-# cur.execute('INSERT INTO sensor (day, temperature, humidity, pressure) VALUES (?,?,?,?)', (11,raspi_data,raspi_data,raspi_data))
-# cur1.execute('INSERT INTO sensor (date, temperature, humidity, pressure) VALUES (?,?,?,?)', ("2024-07-11 24:00:00",27.69,77.99,1013.89))
-# cur1.execute('select * from sensor where date = "2024-07-12 19:15:21" AND date = "2024-07-12 19:47:55"')
-# cur1.execute('DELETE from sensor WHERE id = "1030"')
 cur1.execute('select * from sensor where date = "2024-07-11 00:00:00" OR date = "2024-07-11 01:00:00" ')
-# cur1.execute('select * from sensor where date = "2024-07-11 01:00:00" OR date = "2024-07-12 20:03:45"')
-# sensordata1 = cur.fetchall()
 sensordata2 = cur1.fetchall()
 a1 = sensordata2[0][2]
 a2 = sensordata2[0][3]
@@ -163,32 +143,11 @@ l4 = sensordata13[1][2]
 l5 = sensordata13[1][3]
 l6 = sensordata13[1][4]
 print("sensor", sensordata13)
-# plt.rcParams["font.size"] = 14
-# fig, ax = plt.subplots(facecolor='white')
-# ax.plot(['月', '火' , '水'], [a1, a2, a3], label='気温', marker='o')
-# ax.plot(['月', '火' , '水'], [12, 10, 13], label='湿', marker = 'o')
-# ax.set_xlabel('曜日')
-# ax.set_ylabel('気温', rotation='horizontal')
-# ax.set_yticks([0, 5, 10, 15, 20, 25, 30])
-# ax.grid()
-# ax.legend()
-
-
-
-
 aaa = sensordata2
-# split = re.split('\s+', aaa)
-# print("chenchenchen123212",cur.fetchall())
-# print("chenchen",sensordata1[100])
 conn1.commit()
 conn1.close()
 
-
 def generate_data():
-    # raspberrypiData = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    # raspberrypiData.connect(('192.168.11.90', 5000)) read/write
-    # data_decode = (raspberrypiData.recv(1024).decode('utf-8'))
-    # print("data_decode", data_decode)
     data_decode = "25.0 50.0 1013.25"
     return data_decode
 
@@ -199,7 +158,7 @@ def post_handler():
     time.sleep(1)
     nowtime = timer()
     split = re.split('\s+', data)
-    # print("split", split)
+    # print("split", split)  
     temperature = float(split[0])
     humidity = float(split[1])
     pressure = float(split[2])
@@ -212,43 +171,6 @@ def post_handler():
     ]
     global raspi_data
     raspi_data = data
-    # conn = sqlite3.connect('sensor.db')
-    # conn1 = sqlite3.connect('sensor4.db')
-    # # cur = conn.cursor()
-    # cur1 = conn1.cursor()
-    # # cur.execute('INSERT INTO sensor (day, temperature, humidity, pressure) VALUES (?,?,?,?)', (11,raspi_data,raspi_data,raspi_data))
-    # cur1.execute('INSERT INTO sensor (date, temperature, humidity, pressure) VALUES (?,?,?,?)', (nowtime,11,11,11))
-    # cur1.execute('select * from sensor where date = "2024-07-12 19:15:21"')
-    # # sensordata1 = cur.fetchall()
-    # sensordata2 = cur1.fetchall()
-    # aaa = sensordata2[0]
-    # # print("chenchenchen123212",cur.fetchall())
-    # # print("chenchen",sensordata1[100])
-    # print("chenchay123",aaa)
-    # conn1.commit()
-    # conn1.close()
-    # split = re.split('\s+', sensordata2)
-    # print("split", split)
-    # temperature = float(split[0])
-    # humidity = float(split[1])
-    # pressure = float(split[2])
-    # sensor = [
-    #     {
-    #         "temperature": temperature,
-    #         "huminity": humidity,
-    #         "pressure": pressure
-    #     }
-    # ]
-    # print("sensor", sensor)
-    
-    # split = re.split('\s+', a)
-    # print("asdasdasdas",split) # should display 'bar'
-    # temperature = (split[0])
-    # sensor = [
-    #         {
-    #             "temperature": temperature,
-    #         }
-    #     ]
     return "data receive"
 
 @application.route('/post1', methods=['POST', 'GET'])
@@ -257,22 +179,7 @@ def post_handler1():
     data1 = request.data.decode('utf-8')
     global raspi_data1
     raspi_data1 = data1
-    # split = re.split('\s+', a)
-    # print("asdasdasdas",split) # should display 'bar'
-    # temperature = (split[0])
-    # sensor = [
-    #         {
-    #             "temperature": temperature,
-    #         }
-    #     ]
     return "data receive"
-
-
-# def generate_data1():
-#     raspberrypiData = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-#     raspberrypiData.connect(('192.168.11.75', 6000))
-#     data_decode = (raspberrypiData.recv(1024).decode('utf-8'))
-#     return data_decode
 
 @application.route('/')
 def index():
@@ -288,8 +195,8 @@ def index():
     pressure1 = float(split1[2])
     sensor = [
         {
-            "temperature": temperature,
-            "huminity": humidity,
+            "temperature": temperature,      
+            "huminity": humidity,  
             "pressure": pressure
         }
     ]
@@ -380,72 +287,292 @@ def data1():
         ]
         return jsonify(data1)
 
-# @application.route('/chart-data')
-# def chart_data():
-#     def generate_random_data():
-#             data = []
-#         # while raspi_data != '0 0 0':
-#             nowtime = timer()
-#             split = re.split('\s+', raspi_data)
-#             split1 = re.split('\s+', raspi_data1)
-#             # print("split", split)
-#             # print("split1", split1) 
-#             temperature = float(split[0])
-#             humidity = float(split[1])
-#             pressure = float(split[2])
-#             temperature1 = float(split1[0])
-#             data.append([nowtime, temperature, humidity, pressure])
-#             suujirandom = random.randrange(25, 27)
-#             # print("suujirandom", suujirandom)
-#             with open('sample.csv', 'w', newline="") as f:
-#                 writer = csv.writer(f)
-#                 writer.writerows(data)
-#             json_data = json.dumps(
-#                 {'time': datetime.now().strftime('%H:%M:%S'), 'value': temperature, 'value1': humidity, 'value2': temperature1})
-#             yield f"data:{json_data}\n\n"
-#             # time.sleep(10)
-#     response = Response(stream_with_context(generate_random_data()), mimetype="text/event-stream")
-#     response.headers["Cache-Control"] = "no-cache"
-#     response.headers["X-Accel-Buffering"] = "no"
-#     return response
+@application.route('/chart-data')
+def chart_data():
+    def generate_random_data():
+            data = []
+        # while raspi_data != '0 0 0':
+            nowtime = timer()
+            split = re.split('\s+', raspi_data)
+            split1 = re.split('\s+', raspi_data1)
+            # print("split", split)
+            # print("split1", split1) 
+            temperature = float(split[0])
+            humidity = float(split[1])
+            pressure = float(split[2])
+            temperature1 = float(split1[0])
+            data.append([nowtime, temperature, humidity, pressure])
+            suujirandom = random.randrange(25, 27)
+            # print("suujirandom", suujirandom)
+            with open('sample.csv', 'w', newline="") as f:
+                writer = csv.writer(f)
+                writer.writerows(data)
+            json_data = json.dumps(
+                {'time': datetime.now().strftime('%H:%M:%S'), 'value': temperature, 'value1': humidity, 'value2': temperature1})
+            yield f"data:{json_data}\n\n"
+            # time.sleep(10)
+    response = Response(stream_with_context(generate_random_data()), mimetype="text/event-stream")
+    response.headers["Cache-Control"] = "no-cache"
+    response.headers["X-Accel-Buffering"] = "no"
+    return response
 
-# @application.route('/chart-data1')
-# def chart_data1(): 
-#     def generate_random_data():
-#         # while raspi_data != '0 0 0':
-#             split = re.split('\s+', raspi_data)
-#             split1 = re.split('\s+', raspi_data1)
-#             # print("split", split)
-#             # print("split1", split1) 
-#             humidity = float(split[1])
-#             humidity1 = float(split1[1])
-#             json_data = json.dumps({'time': datetime.now().strftime('%H:%M:%S'), 'value': humidity, 'value1': humidity1})
-#             yield f"data:{json_data}\n\n"
-#             # time.sleep(10)
-#     response = Response(stream_with_context(generate_random_data()), mimetype="text/event-stream")
-#     response.headers["Cache-Control"] = "no-cache"
-#     response.headers["X-Accel-Buffering"] = "no"
-#     return response
+@application.route('/chart-data1')
+def chart_data1(): 
+    def generate_random_data():
+        # while raspi_data != '0 0 0':
+            split = re.split('\s+', raspi_data)
+            split1 = re.split('\s+', raspi_data1)
+            # print("split", split)
+            # print("split1", split1) 
+            humidity = float(split[1])
+            humidity1 = float(split1[1])
+            json_data = json.dumps({'time': datetime.now().strftime('%H:%M:%S'), 'value': humidity, 'value1': humidity1})
+            yield f"data:{json_data}\n\n"
+            # time.sleep(10)
+    response = Response(stream_with_context(generate_random_data()), mimetype="text/event-stream")
+    response.headers["Cache-Control"] = "no-cache"
+    response.headers["X-Accel-Buffering"] = "no"
+    return response
 
-# @application.route('/chart-data2')
-# def chart_data2():
-#     def generate_random_data():
-#         # while raspi_data != '0 0 0':
-#             split = re.split('\s+', raspi_data)
-#             split1 = re.split('\s+', raspi_data1)
-#             # print("split", split)
-#             # print("split1", split1) 
-#             pressure = float(split[2])
-#             pressure1 = float(split1[2])
-#             json_data = json.dumps(
-#                 {'time': datetime.now().strftime('%H:%M:%S'), 'value': pressure, 'value1': pressure1})
-#             yield f"data:{json_data}\n\n"
-#             # time.sleep(10)
-#     response = Response(stream_with_context(generate_random_data()), mimetype="text/event-stream")
-#     response.headers["Cache-Control"] = "no-cache"
-#     response.headers["X-Accel-Buffering"] = "no"
-#     return response
+@application.route('/chart-data2')
+def chart_data2():
+    def generate_random_data():
+        # while raspi_data != '0 0 0':
+            split = re.split('\s+', raspi_data)
+            split1 = re.split('\s+', raspi_data1)
+            # print("split", split)
+            # print("split1", split1) 
+            pressure = float(split[2])
+            pressure1 = float(split1[2])
+            json_data = json.dumps(
+                {'time': datetime.now().strftime('%H:%M:%S'), 'value': pressure, 'value1': pressure1})
+            yield f"data:{json_data}\n\n"
+            # time.sleep(10)
+    response = Response(stream_with_context(generate_random_data()), mimetype="text/event-stream")
+    response.headers["Cache-Control"] = "no-cache"
+    response.headers["X-Accel-Buffering"] = "no"
+    return response
 
+@application.route('/data-range', methods=['GET'])
+def data_range():
+    range_type = request.args.get('range', '1d')
+
+    if range_type == "1d":
+        images = ["images/img.png", "images/img1.png", "images/img2.png"]
+    elif range_type == "7d":
+        images = ["images/weekly_temperature.png", "images/weekly_humidity.png", "images/weekly_pressure.png"]
+    elif range_type == "30d":
+        images = ["images/monthly_temperature.png", "images/monthly_humidity.png", "images/monthly_pressure.png"]
+    elif range_type == "90d":
+        images = ["images/3months_temperature.png", "images/3months_humidity.png", "images/3months_pressure.png"]
+    elif range_type == "180d":
+        images = ["images/6months_temperature.png", "images/6months_humidity.png", "images/6months_pressure.png"]
+    elif range_type == "365d":
+        images = ["images/yearly_temperature.png", "images/yearly_humidity.png", "images/yearly_pressure.png"]
+    else:
+        return jsonify({"error": "Invalid range type"}), 400
+
+    return jsonify({"images": images})
+
+def insert_fake_sensor_data():
+    conn = sqlite3.connect('sensor4.db')
+    cur = conn.cursor()
+
+    cur.execute('''CREATE TABLE IF NOT EXISTS sensor (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        room TEXT,
+        date TEXT,
+        temperature REAL,
+        humidity REAL,
+        pressure REAL
+    )''')
+
+    # now = datetime.now()
+    # total_days = 365
+    # inserted_data = []  # CSV保存用リスト
+
+    # for day in range(total_days):
+    #     for hour in range(0, 24, 3):  # 3時間ごとに1件
+    #         dt = now - timedelta(days=day, hours=hour)
+    #         dt_str = dt.strftime('%Y-%m-%d %H:%M:%S')
+    
+    #         for room in ['開発ルーム', '小会議室']:
+    #             temp = round(random.uniform(18, 28), 1)
+    #             hum = round(random.uniform(40, 70), 1)
+    #             pres = round(random.uniform(1005, 1020), 1)
+    #             cur.execute('INSERT INTO sensor (room, date, temperature, humidity, pressure) VALUES (?, ?, ?, ?, ?)',
+    #                         (room, dt_str, temp, hum, pres))
+                
+    #             # CSV用に分解して保存
+    #             date_part, time_part = dt_str.split(' ')
+    #             inserted_data.append((date_part, time_part, room, temp, hum, pres))
+
+    #         # CSVに保存（3時間ごとの2部屋分）
+    #         save_sensor_data_to_csv(inserted_data)
+            
+    # conn.commit()
+    # conn.close()
+    # print("仮データ（開発ルーム・小会議室）を365日分挿入しました。")
+
+
+def get_sensor_data(days, room):
+    conn = sqlite3.connect('sensor4.db')
+    cur = conn.cursor()
+    
+    today = datetime.now()
+    start_date = today - timedelta(days=days)
+    dates = [(start_date + timedelta(days=i)).strftime('%Y-%m-%d') for i in range(days)]
+    
+    data = []
+    # for date in dates:
+    #     cur.execute('SELECT * FROM sensor WHERE room = ? AND date LIKE ?', (room, f"{date}%"))
+    #     daily_data = cur.fetchall()
+    #     print(f"{room} - {date} データ数: {len(daily_data)}")
+    #     data.append(daily_data)
+    
+    conn.close()
+    return data, start_date, today
+
+
+def process_sensor_data(data):
+    temperature_data = []
+    humidity_data = []
+    pressure_data = []
+
+    for daily_data in data:
+        if daily_data:
+            daily_temperatures = [d[2] for d in daily_data]
+            daily_humidities = [d[3] for d in daily_data]
+            daily_pressures = [d[4] for d in daily_data]
+            
+            temperature_data.append(sum(daily_temperatures) / len(daily_temperatures))
+            humidity_data.append(sum(daily_humidities) / len(daily_humidities))
+            pressure_data.append(sum(daily_pressures) / len(daily_pressures))
+        else:
+            temperature_data.append(0)
+            humidity_data.append(0)
+            pressure_data.append(0)
+    
+    return temperature_data, humidity_data, pressure_data
+
+def plot_sensor_data(xs, ys, title, ylabel, filename, rotation=60):
+    import numpy as np
+
+    plt.rcParams["font.size"] = 10
+    fig, ax = plt.subplots(facecolor='white')
+
+    all_y_values = []
+
+    for y_data, label in ys:
+        # yが12個未満なら、前にNoneを詰めて12個に揃える（後半--ヶ月だけデータがあるケース）
+        if len(y_data) < len(xs):
+            padded_y = [None] * (len(xs) - len(y_data)) + y_data
+        else:
+            padded_y = y_data
+        ax.plot(xs, padded_y, label=label, marker='o')
+        all_y_values += [v for v in padded_y if v is not None]
+
+    ax.set_title(title, fontsize=25)
+    ax.set_xticks(range(len(xs)))
+    # ax.set_xticklabels(xs, rotation=rotation)
+    if rotation != 0:
+        ax.set_xticklabels(xs, rotation=rotation, ha='right')
+    else:
+        ax.set_xticklabels(xs)
+    ax.set_ylabel(ylabel)
+    ax.grid()
+    ax.ticklabel_format(style='plain', axis='y')
+    ax.get_yaxis().get_offset_text().set_visible(False)
+    # ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, _: f'{int(x)}'))
+    # ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, _: f'{x:.1f}')) 
+    ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, _: f'{int(round(x))}'))
+    ax.legend()
+
+     # y軸の中央にデータが表示されるように調整 
+    if all_y_values:
+        y_center = np.mean(all_y_values)
+        y_min = min(all_y_values)
+        y_max = max(all_y_values)
+        y_spread = max(abs(y_max - y_center), abs(y_center - y_min)) * 3.5  # ← 倍に拡大して余裕を持たせる
+        ax.set_ylim(y_center - y_spread, y_center + y_spread)
+
+    fig.tight_layout()
+    fig.savefig(filename)
+    print(f"グラフ保存: {filename}")
+
+def aggregate_monthly_data(data, months):
+    monthly_data = []
+    days_per_month = len(data) // months
+    for i in range(months):
+        chunk = data[i*days_per_month:(i+1)*days_per_month]
+        if chunk:
+            avg = sum(chunk) / len(chunk)
+        else:
+            avg = 0
+        monthly_data.append(avg)
+    return monthly_data
+
+def create_all_graphs():
+    for period, days in [('weekly', 7), ('monthly', 30), ('3months', 90), ('6months', 180), ('yearly', 365)]:
+        dev_data, start_dev, _ = get_sensor_data(days, '開発ルーム')
+        meet_data, _, _ = get_sensor_data(days, '小会議室')
+
+        temp_dev, hum_dev, pres_dev = process_sensor_data(dev_data)
+        temp_meet, hum_meet, pres_meet = process_sensor_data(meet_data)
+
+        if days >= 90:
+            # データを月平均に変換
+            months = days // 30
+            temp_dev = aggregate_monthly_data(temp_dev, months)
+            hum_dev = aggregate_monthly_data(hum_dev, months)
+            pres_dev = aggregate_monthly_data(pres_dev, months)
+
+            temp_meet = aggregate_monthly_data(temp_meet, months)
+            hum_meet = aggregate_monthly_data(hum_meet, months)
+            pres_meet = aggregate_monthly_data(pres_meet, months)
+
+            # x軸は常に12ヶ月固定（現在から過去12ヶ月）
+            xs = [(datetime.now() - timedelta(days=30*i)).strftime('%Y/%m') for i in range(11, -1, -1)]
+
+            # yデータは不足分をNoneで前詰め
+            def pad_to_12months(data):
+                return [None] * (12 - len(data)) + data
+
+            temp_dev = pad_to_12months(temp_dev)
+            hum_dev = pad_to_12months(hum_dev)
+            pres_dev = pad_to_12months(pres_dev)
+
+            temp_meet = pad_to_12months(temp_meet)
+            hum_meet = pad_to_12months(hum_meet)
+            pres_meet = pad_to_12months(pres_meet)
+        else:
+            xs = [(start_dev + timedelta(days=i)).strftime('%Y-%m-%d') for i in range(days)]
+
+        plot_sensor_data(xs, [(temp_dev, '開発ルーム'), (temp_meet, '小会議室')],
+                 '温度', 'Temperature (°C)', f'images/{period}_temperature.png')
+
+        plot_sensor_data(xs, [(hum_dev, '開発ルーム'), (hum_meet, '小会議室')],
+                 '湿度', 'Humidity (%)', f'images/{period}_humidity.png')
+
+        plot_sensor_data(xs, [(pres_dev, '開発ルーム'), (pres_meet, '小会議室')],
+                 '気圧', 'Pressure (hPa)', f'images/{period}_pressure.png')
+
+def save_sensor_data_to_csv(data, filename='output.csv'):
+    
+    write_header = not os.path.exists(filename)
+
+    with open(filename, 'a', newline='', encoding='utf-8') as csvfile:
+        writer = csv.writer(csvfile)
+        if write_header:
+            writer.writerow(['日付', '時刻', '部屋名', '温度', '湿度', '気圧'])
+
+        for row in data:
+            writer.writerow(row)
+
+    print(f"CSVに保存しました: {filename}")
 
 if __name__ == "__main__":
-    application.run(debug=True, host="0.0.0.0", port=8000)
+    insert_fake_sensor_data()
+    create_all_graphs()
+    print("全期間のグラフが生成されました。")
+    serve(application, host="0.0.0.0", port=5000)
