@@ -424,11 +424,11 @@ def get_sensor_data(days, room):
     dates = [(start_date + timedelta(days=i)).strftime('%Y-%m-%d') for i in range(days)]
     
     data = []
-    # for date in dates:
-    #     cur.execute('SELECT * FROM sensor WHERE room = ? AND date LIKE ?', (room, f"{date}%"))
-    #     daily_data = cur.fetchall()
-    #     print(f"{room} - {date} データ数: {len(daily_data)}")
-    #     data.append(daily_data)
+    for date in dates:
+        cur.execute('SELECT * FROM sensor WHERE room = ? AND date LIKE ?', (room, f"{date}%"))
+        daily_data = cur.fetchall()
+        print(f"{room} - {date} データ数: {len(daily_data)}")
+        data.append(daily_data)
     
     conn.close()
     return data, start_date, today
