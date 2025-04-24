@@ -7,7 +7,7 @@ import csv
 import os
 import sqlite3
 import matplotlib.pyplot as plt
-import japanize_matplotlib
+# import japanize_matplotlib
 from waitress import serve
 import logging
 logging.basicConfig(level=logging.DEBUG)
@@ -575,4 +575,4 @@ if __name__ == "__main__":
     insert_fake_sensor_data()
     create_all_graphs()
     print("全期間のグラフが生成されました。")
-    serve(application, host="192.168.3.9", port=5000)
+    serve(application, host="localhost", port=5000)
