@@ -2,3 +2,4 @@ flask
 matplotlib
 japanize_matplotlib
 waitress
+gunicorn
