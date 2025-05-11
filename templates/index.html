@@ -9,17 +9,11 @@
 			href="{{ url_for('static', filename='css/epoch.min.css') }}"
 		/>
 	</head>
+
 	<body>
 		<title>センサーデータ</title>
 		<h1 style="font-size: 35px; margin-top: -0.5rem">端末</h1>
-		<div
-			style="
-				display: flex;
-				justify-content: center;
-				align-items: center;
-				margin-top: -3rem;
-			"
-		>
+		<div class="tanmatsu">
 			<div
 				style="
 					padding: 50px;
@@ -370,10 +364,24 @@
 			}
 
 			/* タブレット用（iPadなど） */
-			@media screen and (min-width: 768px) and (max-width: 1024px) {
+			@media screen and (min-width: 390px) and (max-width: 1024px) {
+				.toggle-switch {
+					top: 20.5rem;
+					right: 8%;
+					width: 60px;
+					height: 30px;
+				}
+
 				.display {
 					flex-direction: column;
 					align-items: center;
+				}
+
+				.tanmatsu {
+					display: flex;
+					justify-content: center;
+					align-items: center;
+					margin-top: -1rem;
 				}
 
 				.filterSection {
@@ -384,8 +392,8 @@
 				}
 
 				canvas {
-					width: 400px !important;
-					height: 250px !important;
+					width: 1000px !important;
+					height: 300px !important;
 				}
 
 				#initialImages,
@@ -400,8 +408,8 @@
 
 				#initialImages img,
 				#dayImages img {
-					width: 400px !important;
-					height: 250px !important;
+					width: 1000px !important;
+					height: 300px !important;
 				}
 			}
 
@@ -412,6 +420,13 @@
 					right: 8%;
 					width: 60px;
 					height: 30px;
+				}
+
+				.tanmatsu {
+					display: flex;
+					justify-content: center;
+					align-items: center;
+					margin-top: -3rem;
 				}
 
 				.filterSection {
