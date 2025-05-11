@@ -1,544 +1,720 @@
 <!DOCTYPE html>
 <html lang="en">
-
-<head>
-	<meta charset="UTF-8" />
-	<title>Creating Real-Time Charts with Flask</title>
-	<link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/epoch.min.css') }}" />
-</head>
-
-<body>
-	<title>センサーデータ</title>
-	<h1 style="font-size: 35px ; margin-top: 1rem;">端末</h1>
-	<div style="display: flex ; justify-content: center;align-items: center; margin-top: 0rem;">
-		<div style="padding: 50px; border: 4px solid blue; border-radius:1.5rem ; width: 310px; height: 160px;">
-			<h1 style="margin-top: -2rem;">開発ルーム</h1>
-			<h1 id="text">
-				{% for match in text %}
-				<tr style="margin-left: 10px">
-					<div style="display: flex;">
-						温度：
-						<div id="temperature">{{ match.temperature }}</div>
-						°C
-					</div>
-					<div style="display: flex;">
-						湿度：
-						<div id="huminity">{{ match.huminity }}</div>
-						%
-					</div>
-					<div style="display: flex;">
-						<div class="pressure">気圧：</div>
-						<div id="pressure">{{ match.pressure }}</div>
-						hPa
-					</div>
-				</tr>
-				{% endfor %}
-			</h1>
+	<head>
+		<meta charset="UTF-8" />
+		<title>Creating Real-Time Charts with Flask</title>
+		<link
+			rel="stylesheet"
+			type="text/css"
+			href="{{ url_for('static', filename='css/epoch.min.css') }}"
+		/>
+	</head>
+	<body>
+		<title>センサーデータ</title>
+		<h1 style="font-size: 35px; margin-top: -0.5rem">端末</h1>
+		<div
+			style="
+				display: flex;
+				justify-content: center;
+				align-items: center;
+				margin-top: -3rem;
+			"
+		>
+			<div
+				style="
+					padding: 50px;
+					border: 4px solid blue;
+					border-radius: 1.5rem;
+					width: 310px;
+					height: 160px;
+				"
+			>
+				<h1 style="margin-top: -2rem">開発ルーム</h1>
+				<h1 id="text">
+					{% for match in text %}
+					<tr style="margin-left: 10px">
+						<div style="display: flex">
+							温度：
+							<div id="temperature">{{ match.temperature }}</div>
+							°C
+						</div>
+						<div style="display: flex">
+							湿度：
+							<div id="huminity">{{ match.huminity }}</div>
+							%
+						</div>
+						<div style="display: flex">
+							<div class="pressure">気圧：</div>
+							<div id="pressure">{{ match.pressure }}</div>
+							hPa
+						</div>
+					</tr>
+					{% endfor %}
+				</h1>
+			</div>
+			<div
+				style="
+					padding: 50px;
+					border: 4px solid rgb(255, 102, 0);
+					border-radius: 1.5rem;
+					width: 310px;
+					height: 160px;
+					margin-left: 1rem;
+				"
+			>
+				<h1 style="margin-top: -2rem">小会議室</h1>
+				<h1 id="text">
+					{% for match1 in text1 %}
+					<tr style="margin-left: 10px">
+						<div style="display: flex">
+							温度：
+							<div id="temperature1">{{ match1.temperature }}</div>
+							°C
+						</div>
+						<div style="display: flex">
+							湿度：
+							<div id="huminity1">{{ match1.huminity }}</div>
+							%
+						</div>
+						<div style="display: flex">
+							<div class="pressure">気圧：</div>
+							<div id="pressure1">{{ match1.pressure }}</div>
+							hPa
+						</div>
+					</tr>
+					{% endfor %}
+				</h1>
+			</div>
+		</div>
+		<div style="text-align: center; margin-bottom: 10px">
+			<label class="toggle-switch">
+				<input type="checkbox" id="toggleButton" onclick="toggleDisplay()" />
+				<span class="slider"></span>
+			</label>
 		</div>
 		<div
-			style="padding: 50px; border: 4px solid rgb(255, 102, 0); border-radius:1.5rem ; width: 310px; height: 160px; margin-left: 1rem;">
-			<h1 style="margin-top: -2rem;">小会議室</h1>
-			<h1 id="text">
-				{% for match1 in text1 %}
-				<tr style="margin-left: 10px">
-					<div style="display: flex;">
-						温度：
-						<div id="temperature1">{{ match1.temperature }}</div>
-						°C
+			id="filterSection"
+			style="display: block; margin-top: 1.5rem"
+			class="filterSection"
+		>
+			<label for="dateFilter">データの期間を選択:</label>
+			<select id="dateFilter" onchange="filterData()">
+				<option value="1d">過去 1 日</option>
+				<option value="7d">過去 1 週間</option>
+				<option value="30d">過去 1 ヶ月</option>
+				<option value="90d">過去 3 ヶ月</option>
+				<option value="180d">過去 6 ヶ月</option>
+				<option value="365d">過去 1 年</option>
+			</select>
+		</div>
+		<div id="pastData" style="display: block">
+			<h1 style="font-size: 35px; margin-top: -0.5rem">過去のデータ</h1>
+			<!-- 1日のデータ (デフォルト表示) -->
+			<div
+				id="dayImages"
+				style="
+					display: flex;
+					justify-content: center;
+					align-items: center;
+					margin-top: 4rem;
+				"
+			>
+				<img src="images/img.png" style="width: 485px; margin-top: -2rem" />
+				<img src="images/img1.png" style="width: 485px; margin-top: -2rem" />
+				<img src="images/img2.png" style="width: 485px; margin-top: -2rem" />
+			</div>
+
+			<!-- 1週間のデータ (最初は非表示) -->
+			<div
+				id="weekImages"
+				style="
+					display: none;
+					justify-content: center;
+					align-items: center;
+					margin-top: 4rem;
+					margin-left: -75px;
+				"
+			>
+				<img
+					src="images/weekly_temperature.png"
+					style="width: 485px; margin-top: -2rem"
+				/>
+				<img
+					src="images/weekly_humidity.png"
+					style="width: 485px; margin-top: -2rem"
+				/>
+				<img
+					src="images/weekly_pressure.png"
+					style="width: 485px; margin-top: -2rem"
+				/>
+			</div>
+
+			<!-- 1ヶ月のデータ -->
+			<div
+				id="monthImages"
+				style="
+					display: none;
+					justify-content: center;
+					align-items: center;
+					margin-top: 4rem;
+					margin-left: -75px;
+				"
+			>
+				<img
+					src="images/monthly_temperature.png"
+					style="width: 485px; margin-top: -2rem"
+				/>
+				<img
+					src="images/monthly_humidity.png"
+					style="width: 485px; margin-top: -2rem"
+				/>
+				<img
+					src="images/monthly_pressure.png"
+					style="width: 485px; margin-top: -2rem"
+				/>
+			</div>
+
+			<!-- 3ヶ月のデータ -->
+			<div
+				id="threeMonthsImages"
+				style="
+					display: none;
+					justify-content: center;
+					align-items: center;
+					margin-top: 4rem;
+					margin-left: -75px;
+				"
+			>
+				<img
+					src="images/3months_temperature.png"
+					style="width: 485px; margin-top: -2rem"
+				/>
+				<img
+					src="images/3months_humidity.png"
+					style="width: 485px; margin-top: -2rem"
+				/>
+				<img
+					src="images/3months_pressure.png"
+					style="width: 485px; margin-top: -2rem"
+				/>
+			</div>
+
+			<!-- 6ヶ月のデータ -->
+			<div
+				id="sixMonthsImages"
+				style="
+					display: none;
+					justify-content: center;
+					align-items: center;
+					margin-top: 4rem;
+					margin-left: -75px;
+				"
+			>
+				<img
+					src="images/6months_temperature.png"
+					style="width: 485px; margin-top: -2rem"
+				/>
+				<img
+					src="images/6months_humidity.png"
+					style="width: 485px; margin-top: -2rem"
+				/>
+				<img
+					src="images/6months_pressure.png"
+					style="width: 485px; margin-top: -2rem"
+				/>
+			</div>
+
+			<!-- 1年のデータ -->
+			<div
+				id="yearImages"
+				style="
+					display: none;
+					justify-content: center;
+					align-items: center;
+					margin-top: 4rem;
+					margin-left: -75px;
+				"
+			>
+				<img
+					src="images/yearly_temperature.png"
+					style="width: 485px; margin-top: -2rem"
+				/>
+				<img
+					src="images/yearly_humidity.png"
+					style="width: 485px; margin-top: -2rem"
+				/>
+				<img
+					src="images/yearly_pressure.png"
+					style="width: 485px; margin-top: -2rem"
+				/>
+			</div>
+		</div>
+		<div id="realTimeCharts" style="display: none">
+			<h1 style="font-size: 30px">リアルタイムチャート</h1>
+			<div class="display">
+				<div class="container">
+					<div class="row">
+						<div class="col-12">
+							<div class="card">
+								<div class="card-body">
+									<canvas id="canvas"></canvas>
+								</div>
+							</div>
+						</div>
 					</div>
-					<div style="display: flex;">
-						湿度：
-						<div id="huminity1">{{ match1.huminity }}</div>
-						%
+				</div>
+
+				<div class="container">
+					<div class="row2">
+						<div class="col-12">
+							<div class="card">
+								<div class="card-body">
+									<canvas id="canvas1"></canvas>
+								</div>
+							</div>
+						</div>
 					</div>
-					<div style="display: flex;">
-						<div class="pressure">気圧：</div>
-						<div id="pressure1">{{ match1.pressure }}</div>
-						hPa
-					</div>
-				</tr>
-				{% endfor %}
-			</h1>
-		</div>
-	</div>
-	<div style="position: absolute; top:8rem; right: 5rem;">
-		<label class="toggle-switch">
-			<input type="checkbox" id="toggleButton" onclick="toggleDisplay()">
-			<span class="slider"></span>
-		</label>
-	</div>
-	<div id="filterSection" style="display: block; margin-top: 7rem;">
-		<label for="dateFilter">データの期間を選択:</label>
-		<select id="dateFilter" onchange="filterData()">
-			<option value="1d">過去 1 日</option>
-			<option value="7d">過去 1 週間</option>
-			<option value="30d">過去 1 ヶ月</option>
-			<option value="90d">過去 3 ヶ月</option>
-			<option value="180d">過去 6 ヶ月</option>
-			<option value="365d">過去 1 年</option>
-		</select>
-	</div>
-	<div id="pastData" style="display: block;">
-		<h1 style="font-size: 35px; margin-top: 2rem;">過去のデータ</h1>
-		<!-- 1日のデータ (デフォルト表示) -->
-		<div id="dayImages" >
-			<div class="image1"><img src="images/img.png" style="width: 700px; margin-top: 3rem;"></div>
-			<div class="image2"><img src="images/img1.png" style="width: 700px; margin-top: -2rem;"></div>
-			<div class="image3"><img src="images/img2.png" style="width: 700px; margin-top: -2rem;"></div>
-		</div>
-
-		<!-- 1週間のデータ (最初は非表示) -->
-		<div id="weekImages"
-			style="display: none; ">
-			<div class="image1"><img src="images/weekly_temperature.png" style="width: 700px; margin-top: 3rem;"></div>
-			<div class="image2"><img src="images/weekly_humidity.png" style="width: 700px; margin-top: -2rem;"></div>
-			<div class="image3"><img src="images/weekly_pressure.png" style="width: 700px; margin-top: -2rem;"></div>
-		</div>
-
-		<!-- 1ヶ月のデータ -->
-		<div id="monthImages"
-			style="display: none; ">
-			<div class="image1"><img src="images/monthly_temperature.png" style="width: 700px; margin-top: 3rem;"></div>
-			<div class="image2"><img src="images/monthly_humidity.png" style="width: 700px; margin-top: -2rem;"></div>
-			<div class="image3"><img src="images/monthly_pressure.png" style="width: 700px; margin-top: -2rem;"></div>
-		</div>
-
-		<!-- 3ヶ月のデータ -->
-		<div id="threeMonthsImages"
-			style="display: none; ">
-			<div class="image1"><img src="images/3months_temperature.png" style="width: 700px; margin-top: 3rem;"></div>
-			<div class="image2"><img src="images/3months_humidity.png" style="width: 700px; margin-top: -2rem;"></div>
-			<div class="image3"><img src="images/3months_pressure.png" style="width: 700px; margin-top: -2rem;"></div>
-		</div>
-
-		<!-- 6ヶ月のデータ -->
-		<div id="sixMonthsImages"
-			style="display: none">
-			<div class="image1"><img src="images/6months_temperature.png" style="width: 700px; margin-top: 3rem;"></div>
-			<div class="image2"><img src="images/6months_humidity.png" style="width: 700px; margin-top: -2rem;"></div>
-			<div class="image3"><img src="images/6months_pressure.png" style="width: 700px; margin-top: -2rem;"></div>
-		</div>
-
-		<!-- 1年のデータ -->
-		<div id="yearImages"
-			style="display: none; ">
-			<div class="image1"><img src="images/yearly_temperature.png" style="width: 700px; margin-top: 3rem;"></div>
-			<div class="image2"><img src="images/yearly_humidity.png" style="width: 700px; margin-top: -2rem;"></div>
-			<div class="image3"><img src="images/yearly_pressure.png" style="width: 700px; margin-top: -2rem;"></div>
-		</div>
-
-	</div>
-	<div id="realTimeCharts" style="display: none;">
-		<h1 style="font-size: 30px">リアルタイムチャート</h1>
-		<div class="display">
-			<div class="container">
-				<div class="image1">
-					<div class="col-12">
-						<div class="card">
-							<div class="card-body">
-								<canvas id="canvas"></canvas>
+				</div>
+				<div class="container">
+					<div class="row2">
+						<div class="col-12">
+							<div class="card">
+								<div class="card-body">
+									<canvas id="canvas2"></canvas>
+								</div>
 							</div>
 						</div>
 					</div>
 				</div>
 			</div>
-
-			<div class="container">
-				<div class="image2">
-					<div class="col-12">
-						<div class="card">
-							<div class="card-body">
-								<canvas id="canvas1"></canvas>
-							</div>
-						</div>
-					</div>
-				</div>
-			</div>
-			<div class="container">
-				<div class="image3">
-					<div class="col-12">
-						<div class="card">
-							<div class="card-body">
-								<canvas id="canvas2"></canvas>
-							</div>
-						</div>
-					</div>
-				</div>
-			</div>
 		</div>
-	</div>
-	<style>
-		.toggle-switch {
-			position: absolute;
-			width: 60px;
-			height: 30px;
-			right: 8%;
-			top: 295px;
-			display: inline-block;
-		}
-
-		.toggle-switch input {
-			opacity: 0;
-			width: 0;
-			height: 0;
-		}
-
-		.image1 {
-			display: flex;
-			justify-content: center;
-			align-items: center;
-		}
-
-		.image2 {
-			display: flex;
-			justify-content: center;
-			align-items: center;
-		}
-
-		.image3 {
-			display: flex;
-			justify-content: center;
-			align-items: center;
-		}
-
-		.slider {
-			position: absolute;
-			cursor: pointer;
-			top: 0;
-			left: 0;
-			right: 0;
-			bottom: 0;
-			background-color: #ccc;
-			border-radius: 30px;
-			transition: 0.4s;
-		}
-
-		.slider::before {
-			content: "";
-			position: absolute;
-			height: 22px;
-			width: 22px;
-			left: 4px;
-			bottom: 4px;
-			background-color: white;
-			border-radius: 50%;
-			transition: 0.4s;
-		}
-
-		input:checked+.slider {
-			background-color: black;
-		}
-
-		input:checked+.slider::before {
-			transform: translateX(30px);
-		}
-
-		#filterSection {
-			display: none;
-			position: absolute;
-			/* 絶対位置指定 */
-			right: 8%;
-			/* トグルボタンの右側に配置 */
-			padding: 10px;
-			border: 2px solid #ccc;
-			border-radius: 5px;
-			background-color: #f9f9f9;
-			width: fit-content;
-		}
-
-		/* リアルタイムチャートのサイズを過去のデータと同じにする */
-		.display {
-			/* display: flex;
-			justify-content: center;
-			align-items: center;
-			gap: 1rem; */
-			/* 画像と同じように間隔を空ける */
-		}
-
-		canvas {
-			width: 900px !important;
-			height: 550px !important;
-			/* 高さは調整可能 */
-		}
-	</style>
-	<script>
-		function toggleDisplay() {
-			var pastData = document.getElementById("pastData");
-			var realTimeCharts = document.getElementById("realTimeCharts");
-			var filterSection = document.getElementById("filterSection");
-
-			if (pastData.style.display === "block") {
-				pastData.style.display = "none";
-				realTimeCharts.style.display = "block";
-				filterSection.style.display = "none";
-			} else {
-				pastData.style.display = "block";
-				realTimeCharts.style.display = "none";
-				filterSection.style.display = "block";
+		<style>
+			.toggle-switch {
+				position: absolute;
+				width: 60px;
+				height: 30px;
+				right: 8%;
+				top: 300px;
+				display: inline-block;
+				margin-bottom: 20px;
 			}
-		}
-		function filterData() {
-			var filterValue = document.getElementById("dateFilter").value;
-			console.log("選択した期間: ", filterValue);
 
-			// 選択したデータに応じて画像を切り替える
-			document.getElementById("dayImages").style.display = "none";
-			document.getElementById("weekImages").style.display = "none";
-			document.getElementById("monthImages").style.display = "none";
-			document.getElementById("threeMonthsImages").style.display = "none";
-			document.getElementById("sixMonthsImages").style.display = "none";
-			document.getElementById("yearImages").style.display = "none";
-
-			// Show the selected image container
-			if (filterValue === "1d") {
-				document.getElementById("dayImages").style.display = "block";
-			} else if (filterValue === "7d") {
-				document.getElementById("weekImages").style.display = "block";
-			} else if (filterValue === "30d") {
-				document.getElementById("monthImages").style.display = "block";
-			} else if (filterValue === "90d") {
-				document.getElementById("threeMonthsImages").style.display = "block";
-			} else if (filterValue === "180d") {
-				document.getElementById("sixMonthsImages").style.display = "block";
-			} else if (filterValue === "365d") {
-				document.getElementById("yearImages").style.display = "block";
+			.toggle-switch input {
+				opacity: 0;
+				width: 0;
+				height: 0;
 			}
-		}			
-	</script>
 
-	<!--suppress JSUnresolvedLibraryURL -->
-	<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.4.0/jquery.min.js"></script>
-	<!--suppress JSUnresolvedLibraryURL -->
-	<script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/4.3.1/js/bootstrap.min.js"></script>
-	<!--suppress JSUnresolvedLibraryURL -->
-	<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.8.0/Chart.min.js"></script>
-	<script>
-		setInterval(function () {
-			fetch("/data")
-				.then(function (response) {
-					console.log("aaaaa", response);
-					return response.json();
-				})
-				.then(data =>
-					data.forEach(match => {
-						console.log("match", match);
-						document.getElementById("temperature").innerHTML = match.temperature;
-						document.getElementById("huminity").innerHTML = match.huminity;
-						document.getElementById("pressure").innerHTML = match.pressure;
-					}),
-				);
-		}, 1000);
-		setInterval(function () {
-			fetch("/data1")
-				.then(function (response) {
-					console.log("aaaaa", response);
-					return response.json();
-				})
-				.then(data =>
-					data.forEach(match => {
-						console.log("match", match);
-						document.getElementById("temperature1").innerHTML =
-							match.temperature;
-						document.getElementById("huminity1").innerHTML = match.huminity;
-						document.getElementById("pressure1").innerHTML = match.pressure;
-					}),
-				);
-		}, 1000);
-		$(document).ready(function () {
-			const config = {
-				type: "line",
-				data: {
-					labels: [],
-					datasets: [
-						{
-							label: "開発ルーム",
-							backgroundColor: "blue",
-							borderColor: "blue",
-							data: [],
-							fill: false,
-						},
-						{
-							label: "小会議室",
-							backgroundColor: "rgb(255, 102, 0)",
-							borderColor: "rgb(255, 102, 0)",
-							data: [],
-							fill: false,
-						},
-					],
-				},
-				options: {
-					responsive: true,
-					tooltips: {
-						mode: "index",
-						intersect: false,
-					},
-					hover: {
-						mode: "nearest",
-						intersect: true,
-					},
-					scales: {
-						xAxes: [
+			.slider {
+				position: absolute;
+				cursor: pointer;
+				top: 0;
+				left: 0;
+				right: 0;
+				bottom: 0;
+				background-color: #ccc;
+				border-radius: 30px;
+				transition: 0.4s;
+			}
+
+			.slider::before {
+				content: "";
+				position: absolute;
+				height: 22px;
+				width: 22px;
+				left: 4px;
+				bottom: 4px;
+				background-color: white;
+				border-radius: 50%;
+				transition: 0.4s;
+			}
+
+			input:checked + .slider {
+				background-color: black;
+			}
+
+			input:checked + .slider::before {
+				transform: translateX(30px);
+			}
+
+			#filterContainer {
+				display: flex;
+				flex-direction: row;
+				justify-content: flex-start;
+				gap: 20px;
+				position: absolute;
+				right: 8%;
+				top: 340px;
+			}
+
+			#filterSection1,
+			#filterSection2,
+			#filterSection3 {
+				padding: 10px;
+				border: 2px solid #ccc;
+				border-radius: 5px;
+				background-color: #f9f9f9;
+				width: fit-content;
+			}
+
+			.display {
+				display: flex;
+				justify-content: center;
+				align-items: center;
+				gap: 1rem;
+			}
+
+			canvas {
+				width: 485px !important;
+				height: 300px !important;
+			}
+
+			/* タブレット用（iPadなど） */
+			@media screen and (min-width: 768px) and (max-width: 1024px) {
+				.display {
+					flex-direction: column;
+					align-items: center;
+				}
+
+				.filterSection {
+					position: absolute;
+					display: block;
+					margin-top: 2rem;
+					right: 5rem;
+				}
+
+				canvas {
+					width: 400px !important;
+					height: 250px !important;
+				}
+
+				#initialImages,
+				#dayImages {
+					display: flex;
+					flex-direction: column;
+					justify-content: center;
+					align-items: center;
+					margin-top: 4rem;
+					gap: 40px;
+				}
+
+				#initialImages img,
+				#dayImages img {
+					width: 400px !important;
+					height: 250px !important;
+				}
+			}
+
+			/* PC用（1025px以上） */
+			@media screen and (min-width: 1025px) {
+				.toggle-switch {
+					top: 300px;
+					right: 8%;
+					width: 60px;
+					height: 30px;
+				}
+
+				.filterSection {
+					position: absolute;
+					display: block;
+					margin-top: 2rem;
+					right: 8rem;
+				}
+
+				#filterContainer {
+					flex-direction: row;
+					top: 340px;
+					right: 8%;
+				}
+
+				canvas {
+					width: 485px !important;
+					height: 300px !important;
+				}
+
+				#initialImages img,
+				#dayImages img {
+					width: 485px !important;
+					height: 300px !important;
+				}
+			}
+		</style>
+		<script>
+			function toggleDisplay() {
+				var pastData = document.getElementById("pastData");
+				var realTimeCharts = document.getElementById("realTimeCharts");
+				var filterSection = document.getElementById("filterSection");
+
+				if (pastData.style.display === "block") {
+					pastData.style.display = "none";
+					realTimeCharts.style.display = "block";
+					filterSection.style.display = "none";
+				} else {
+					pastData.style.display = "block";
+					realTimeCharts.style.display = "none";
+					filterSection.style.display = "block";
+				}
+			}
+			function filterData() {
+				var filterValue = document.getElementById("dateFilter").value;
+				console.log("選択した期間: ", filterValue);
+
+				// 選択したデータに応じて画像を切り替える
+				document.getElementById("dayImages").style.display = "none";
+				document.getElementById("weekImages").style.display = "none";
+				document.getElementById("monthImages").style.display = "none";
+				document.getElementById("threeMonthsImages").style.display = "none";
+				document.getElementById("sixMonthsImages").style.display = "none";
+				document.getElementById("yearImages").style.display = "none";
+
+				// Show the selected image container
+				if (filterValue === "1d") {
+					document.getElementById("dayImages").style.display = "flex";
+				} else if (filterValue === "7d") {
+					document.getElementById("weekImages").style.display = "flex";
+				} else if (filterValue === "30d") {
+					document.getElementById("monthImages").style.display = "flex";
+				} else if (filterValue === "90d") {
+					document.getElementById("threeMonthsImages").style.display = "flex";
+				} else if (filterValue === "180d") {
+					document.getElementById("sixMonthsImages").style.display = "flex";
+				} else if (filterValue === "365d") {
+					document.getElementById("yearImages").style.display = "flex";
+				}
+			}
+		</script>
+
+		<!--suppress JSUnresolvedLibraryURL -->
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.4.0/jquery.min.js"></script>
+		<!--suppress JSUnresolvedLibraryURL -->
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/4.3.1/js/bootstrap.min.js"></script>
+		<!--suppress JSUnresolvedLibraryURL -->
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.8.0/Chart.min.js"></script>
+		<script>
+			setInterval(function () {
+				fetch("/data")
+					.then(function (response) {
+						console.log("aaaaa", response);
+						return response.json();
+					})
+					.then(data =>
+						data.forEach(match => {
+							console.log("match", match);
+							document.getElementById("temperature").innerHTML =
+								match.temperature;
+							document.getElementById("huminity").innerHTML = match.huminity;
+							document.getElementById("pressure").innerHTML = match.pressure;
+						})
+					);
+			}, 1000);
+			setInterval(function () {
+				fetch("/data1")
+					.then(function (response) {
+						console.log("aaaaa", response);
+						return response.json();
+					})
+					.then(data =>
+						data.forEach(match => {
+							console.log("match", match);
+							document.getElementById("temperature1").innerHTML =
+								match.temperature;
+							document.getElementById("huminity1").innerHTML = match.huminity;
+							document.getElementById("pressure1").innerHTML = match.pressure;
+						})
+					);
+			}, 1000);
+			$(document).ready(function () {
+				const config = {
+					type: "line",
+					data: {
+						labels: [],
+						datasets: [
 							{
-								display: true,
-								scaleLabel: {
-									display: true,
-									labelString: "温度",
-								},
+								label: "開発ルーム",
+								backgroundColor: "blue",
+								borderColor: "blue",
+								data: [],
+								fill: false,
+							},
+							{
+								label: "小会議室",
+								backgroundColor: "rgb(255, 102, 0)",
+								borderColor: "rgb(255, 102, 0)",
+								data: [],
+								fill: false,
 							},
 						],
 					},
-				},
-			};
-
-			const context = document.getElementById("canvas").getContext("2d");
-			const lineChart = new Chart(context, config);
-			const source = new EventSource("/chart-data");
-			source.onmessage = function (event) {
-				const data = JSON.parse(event.data);
-				if (config.data.labels.length === 24) {
-					config.data.labels.shift();
-					config.data.datasets[0].data.shift();
-					config.data.datasets[1].data.shift();
-				}
-				config.data.labels.push(data.time);
-				config.data.datasets[0].data.push(data.value);
-				config.data.datasets[1].data.push(data.value2);
-				lineChart.update();
-			};
-		});
-		$(document).ready(function () {
-			const config = {
-				type: "line",
-				data: {
-					labels: [],
-					datasets: [
-						{
-							label: "開発ルーム",
-							backgroundColor: "blue",
-							borderColor: "blue",
-							data: [],
-							fill: false,
+					options: {
+						responsive: true,
+						tooltips: {
+							mode: "index",
+							intersect: false,
 						},
-						{
-							label: "小会議室",
-							backgroundColor: "rgb(255, 102, 0)",
-							borderColor: "rgb(255, 102, 0)",
-							data: [],
-							fill: false,
+						hover: {
+							mode: "nearest",
+							intersect: true,
 						},
-					],
-				},
-				options: {
-					responsive: true,
-					tooltips: {
-						mode: "index",
-						intersect: false,
-					},
-					hover: {
-						mode: "nearest",
-						intersect: true,
-					},
-					scales: {
-						xAxes: [
-							{
-								display: true,
-								scaleLabel: {
+						scales: {
+							xAxes: [
+								{
 									display: true,
-									labelString: "湿度",
+									scaleLabel: {
+										display: true,
+										labelString: "温度",
+									},
 								},
+							],
+						},
+					},
+				};
+
+				const context = document.getElementById("canvas").getContext("2d");
+				const lineChart = new Chart(context, config);
+				const source = new EventSource("/chart-data");
+				source.onmessage = function (event) {
+					const data = JSON.parse(event.data);
+					if (config.data.labels.length === 24) {
+						config.data.labels.shift();
+						config.data.datasets[0].data.shift();
+						config.data.datasets[1].data.shift();
+					}
+					config.data.labels.push(data.time);
+					config.data.datasets[0].data.push(data.value);
+					config.data.datasets[1].data.push(data.value2);
+					lineChart.update();
+				};
+			});
+			$(document).ready(function () {
+				const config = {
+					type: "line",
+					data: {
+						labels: [],
+						datasets: [
+							{
+								label: "開発ルーム",
+								backgroundColor: "blue",
+								borderColor: "blue",
+								data: [],
+								fill: false,
+							},
+							{
+								label: "小会議室",
+								backgroundColor: "rgb(255, 102, 0)",
+								borderColor: "rgb(255, 102, 0)",
+								data: [],
+								fill: false,
 							},
 						],
 					},
-				},
-			};
-
-			const context = document.getElementById("canvas1").getContext("2d");
-
-			const lineChart = new Chart(context, config);
-
-			const source = new EventSource("/chart-data1");
-
-			source.onmessage = function (event) {
-				const data = JSON.parse(event.data);
-				if (config.data.labels.length === 24) {
-					config.data.labels.shift();
-					config.data.datasets[0].data.shift();
-					config.data.datasets[1].data.shift();
-				}
-				config.data.labels.push(data.time);
-				config.data.datasets[0].data.push(data.value);
-				config.data.datasets[1].data.push(data.value1);
-				lineChart.update();
-			};
-		});
-		$(document).ready(function () {
-			const config = {
-				type: "line",
-				data: {
-					labels: [],
-					datasets: [
-						{
-							label: "開発ルーム",
-							backgroundColor: "blue",
-							borderColor: "blue",
-							data: [],
-							fill: false,
+					options: {
+						responsive: true,
+						tooltips: {
+							mode: "index",
+							intersect: false,
 						},
-						{
-							label: "小会議室",
-							backgroundColor: "rgb(255, 102, 0)",
-							borderColor: "rgb(255, 102, 0)",
-							data: [],
-							fill: false,
+						hover: {
+							mode: "nearest",
+							intersect: true,
 						},
-					],
-				},
-				options: {
-					width: "500px",
-					height: "300px",
-					responsive: true,
-					tooltips: {
-						mode: "index",
-						intersect: false,
-					},
-					hover: {
-						mode: "nearest",
-						intersect: true,
-					},
-					scales: {
-						xAxes: [
-							{
-								display: true,
-								scaleLabel: {
+						scales: {
+							xAxes: [
+								{
 									display: true,
-									labelString: "気圧",
+									scaleLabel: {
+										display: true,
+										labelString: "湿度",
+									},
 								},
+							],
+						},
+					},
+				};
+
+				const context = document.getElementById("canvas1").getContext("2d");
+
+				const lineChart = new Chart(context, config);
+
+				const source = new EventSource("/chart-data1");
+
+				source.onmessage = function (event) {
+					const data = JSON.parse(event.data);
+					if (config.data.labels.length === 24) {
+						config.data.labels.shift();
+						config.data.datasets[0].data.shift();
+						config.data.datasets[1].data.shift();
+					}
+					config.data.labels.push(data.time);
+					config.data.datasets[0].data.push(data.value);
+					config.data.datasets[1].data.push(data.value1);
+					lineChart.update();
+				};
+			});
+			$(document).ready(function () {
+				const config = {
+					type: "line",
+					data: {
+						labels: [],
+						datasets: [
+							{
+								label: "開発ルーム",
+								backgroundColor: "blue",
+								borderColor: "blue",
+								data: [],
+								fill: false,
+							},
+							{
+								label: "小会議室",
+								backgroundColor: "rgb(255, 102, 0)",
+								borderColor: "rgb(255, 102, 0)",
+								data: [],
+								fill: false,
 							},
 						],
 					},
-				},
-			};
+					options: {
+						responsive: true,
+						tooltips: {
+							mode: "index",
+							intersect: false,
+						},
+						hover: {
+							mode: "nearest",
+							intersect: true,
+						},
+						scales: {
+							xAxes: [
+								{
+									display: true,
+									scaleLabel: {
+										display: true,
+										labelString: "気圧",
+									},
+								},
+							],
+						},
+					},
+				};
 
-			const context = document.getElementById("canvas2").getContext("2d");
+				const context = document.getElementById("canvas2").getContext("2d");
 
-			const lineChart = new Chart(context, config);
+				const lineChart = new Chart(context, config);
 
-			const source = new EventSource("/chart-data2");
+				const source = new EventSource("/chart-data2");
 
-			source.onmessage = function (event) {
-				const data = JSON.parse(event.data);
-				if (config.data.labels.length === 24) {
-					config.data.labels.shift();
-					config.data.datasets[0].data.shift();
-					config.data.datasets[1].data.shift();
-				}
-				config.data.labels.push(data.time);
-				config.data.datasets[0].data.push(data.value);
-				config.data.datasets[1].data.push(data.value1);
-				lineChart.update();
-			};
-		});
-	</script>
-</body>
-
+				source.onmessage = function (event) {
+					const data = JSON.parse(event.data);
+					if (config.data.labels.length === 24) {
+						config.data.labels.shift();
+						config.data.datasets[0].data.shift();
+						config.data.datasets[1].data.shift();
+					}
+					config.data.labels.push(data.time);
+					config.data.datasets[0].data.push(data.value);
+					config.data.datasets[1].data.push(data.value1);
+					lineChart.update();
+				};
+			});
+		</script>
+	</body>
 </html>
