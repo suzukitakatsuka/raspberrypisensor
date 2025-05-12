@@ -7,10 +7,11 @@ import csv
 import os
 import sqlite3
 import matplotlib.pyplot as plt
-# import japanize_matplotlib
+import japanize_matplotlib
 from waitress import serve
 import logging
 logging.basicConfig(level=logging.DEBUG)
+import numpy as np
 
 from flask import Flask, Response, render_template, stream_with_context, jsonify, request
 
@@ -353,53 +354,63 @@ def chart_data2():
     response.headers["X-Accel-Buffering"] = "no"
     return response
 
-@application.route('/data-range', methods=['GET'])
-def data_range():
-    range_type = request.args.get('range', '1d')
+@application.route('/select-period', methods=['GET'])
+def select_period():
+    start_date_str = request.args.get('start')
+    end_date_str = request.args.get('end')
 
-    if range_type == "1d":
-        images = ["images/img.png", "images/img1.png", "images/img2.png"]
-    elif range_type == "7d":
-        images = ["images/weekly_temperature.png", "images/weekly_humidity.png", "images/weekly_pressure.png"]
-    elif range_type == "30d":
-        images = ["images/monthly_temperature.png", "images/monthly_humidity.png", "images/monthly_pressure.png"]
-    elif range_type == "90d":
-        images = ["images/3months_temperature.png", "images/3months_humidity.png", "images/3months_pressure.png"]
-    elif range_type == "180d":
-        images = ["images/6months_temperature.png", "images/6months_humidity.png", "images/6months_pressure.png"]
-    elif range_type == "365d":
-        images = ["images/yearly_temperature.png", "images/yearly_humidity.png", "images/yearly_pressure.png"]
-    else:
-        return jsonify({"error": "Invalid range type"}), 400
+    # 日付が正しくない場合
+    if not start_date_str or not end_date_str:
+        return jsonify({"error": "start and end dates are required"}), 400
+
+    try:
+        # 日付のフォーマットを変換
+        start_date = datetime.strptime(start_date_str, '%Y-%m-%d')
+        end_date = datetime.strptime(end_date_str, '%Y-%m-%d')
+    except ValueError:
+        return jsonify({"error": "Invalid date format"}), 400
+
+    # グラフを作成して画像のパスを取得
+    images = create_graphs(start_date, end_date)
 
     return jsonify({"images": images})
 
-def insert_fake_sensor_data():
-    conn = sqlite3.connect('sensor4.db')
-    cur = conn.cursor()
+# def save_sensor_data_to_csv(data):
+#     # CSV保存の処理（仮の実装）
+#     import csv
+#     with open('sensor_data.csv', mode='a', newline='', encoding='utf-8') as file:
+#         writer = csv.writer(file)
+#         writer.writerows(data)
+#     print("CSV保存完了")
 
-    cur.execute('''CREATE TABLE IF NOT EXISTS sensor (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        room TEXT,
-        date TEXT,
-        temperature REAL,
-        humidity REAL,
-        pressure REAL
-    )''')
+# def insert_fake_sensor_data():
+#     conn = sqlite3.connect('sensor4.db')
+#     cur = conn.cursor()
+
+#     # テーブルが存在しない場合に作成
+#     cur.execute('''CREATE TABLE IF NOT EXISTS sensor (
+#         id INTEGER PRIMARY KEY AUTOINCREMENT,
+#         room TEXT,
+#         date TEXT,
+#         temperature REAL,
+#         humidity REAL,
+#         pressure REAL
+#     )''')
 
     # now = datetime.now()
-    # total_days = 365
+    # total_days = 365  # 1年間分
     # inserted_data = []  # CSV保存用リスト
 
+    # # 365日分のデータを挿入
     # for day in range(total_days):
-    #     for hour in range(0, 24, 3):  # 3時間ごとに1件
+    #     for hour in range(0, 24, 3):  # 3時間ごとにデータを挿入
     #         dt = now - timedelta(days=day, hours=hour)
     #         dt_str = dt.strftime('%Y-%m-%d %H:%M:%S')
     
     #         for room in ['開発ルーム', '小会議室']:
-    #             temp = round(random.uniform(18, 28), 1)
-    #             hum = round(random.uniform(40, 70), 1)
-    #             pres = round(random.uniform(1005, 1020), 1)
+    #             temp = round(random.uniform(18, 28), 1)  # 温度 (18〜28度の間)
+    #             hum = round(random.uniform(40, 70), 1)   # 湿度 (40〜70%)
+    #             pres = round(random.uniform(1005, 1020), 1)  # 気圧 (1005〜1020 hPa)
     #             cur.execute('INSERT INTO sensor (room, date, temperature, humidity, pressure) VALUES (?, ?, ?, ?, ?)',
     #                         (room, dt_str, temp, hum, pres))
                 
@@ -407,32 +418,49 @@ def insert_fake_sensor_data():
     #             date_part, time_part = dt_str.split(' ')
     #             inserted_data.append((date_part, time_part, room, temp, hum, pres))
 
-    #         # CSVに保存（3時間ごとの2部屋分）
-    #         save_sensor_data_to_csv(inserted_data)
-            
+    #     # 3時間ごとのデータが揃ったらCSVに保存
+    #     save_sensor_data_to_csv(inserted_data)
+    #     inserted_data.clear()  # 保存したらリストをクリア
+
     # conn.commit()
     # conn.close()
     # print("仮データ（開発ルーム・小会議室）を365日分挿入しました。")
 
-
-def get_sensor_data(days, room):
+def get_sensor_data(start_date, end_date, room):
     conn = sqlite3.connect('sensor4.db')
     cur = conn.cursor()
-    
-    today = datetime.now()
-    start_date = today - timedelta(days=days)
-    dates = [(start_date + timedelta(days=i)).strftime('%Y-%m-%d') for i in range(days)]
-    
-    data = []
-    for date in dates:
-        cur.execute('SELECT * FROM sensor WHERE room = ? AND date LIKE ?', (room, f"{date}%"))
-        daily_data = cur.fetchall()
-        print(f"{room} - {date} データ数: {len(daily_data)}")
-        data.append(daily_data)
-    
-    conn.close()
-    return data, start_date, today
 
+    data = []
+
+    # 1日だけの場合 → 時間単位で取得
+    if start_date == end_date:
+        date_str = start_date.strftime('%Y-%m-%d')
+        for hour in range(24):
+            hour_start = f"{date_str} {hour:02d}:00:00"
+            hour_end = f"{date_str} {hour:02d}:59:59"
+            cur.execute('''
+                SELECT AVG(temperature), AVG(humidity), AVG(pressure)
+                FROM sensor
+                WHERE room = ? AND date >= ? AND date <= ?
+            ''', (room, hour_start, hour_end))
+            avg_row = cur.fetchone()
+            print(f"{room} - {hour:02d}:00 データ: {avg_row}")
+            if avg_row[0] is not None:
+                data.append((f"{hour:02d}:00", avg_row[0], avg_row[1], avg_row[2]))
+            else:
+                data.append((f"{hour:02d}:00", None, None, None))
+
+    else:
+        # 通常（日単位）の取得
+        dates = [(start_date + timedelta(days=i)).strftime('%Y-%m-%d') for i in range((end_date - start_date).days + 1)]
+        for date in dates:
+            cur.execute('SELECT * FROM sensor WHERE room = ? AND date LIKE ?', (room, f"{date}%"))
+            daily_data = cur.fetchall()
+            print(f"{room} - {date} データ数: {len(daily_data)}")
+            data.append(daily_data)
+
+    conn.close()
+    return data
 
 def process_sensor_data(data):
     temperature_data = []
@@ -455,8 +483,46 @@ def process_sensor_data(data):
     
     return temperature_data, humidity_data, pressure_data
 
+def aggregate_weekly_data(data):
+    weekly_data = []
+    weeks = len(data) // 7
+    for i in range(weeks):
+        chunk = data[i*7:(i+1)*7]
+        avg = sum(chunk) / len(chunk) if chunk else 0
+        weekly_data.append(avg)
+    
+    remaining_days = len(data) % 7
+    if remaining_days > 0:
+        chunk = data[-remaining_days:]
+        weekly_data.extend(chunk)
+    
+    return weekly_data
+
+def aggregate_monthly_data(data, start_date, _):
+    monthly_data = []
+    current_month = start_date.month
+    current_year = start_date.year
+    current_month_data = []
+    
+    for i, value in enumerate(data):
+        current_date = start_date + timedelta(days=i)
+        if current_date.month != current_month or current_date.year != current_year:
+            # 月が変わった場合
+            if current_month_data:
+                monthly_data.append(sum(current_month_data) / len(current_month_data))  # 月単位の平均を追加
+            current_month_data = [value]  # 新しい月にデータをリセット
+            current_month = current_date.month
+            current_year = current_date.year
+        else:
+            current_month_data.append(value)
+    
+    # 最後の月の処理
+    if current_month_data:
+        monthly_data.append(sum(current_month_data) / len(current_month_data))
+    
+    return monthly_data
+
 def plot_sensor_data(xs, ys, title, ylabel, filename, rotation=60):
-    import numpy as np
 
     plt.rcParams["font.size"] = 10
     fig, ax = plt.subplots(facecolor='white')
@@ -474,7 +540,6 @@ def plot_sensor_data(xs, ys, title, ylabel, filename, rotation=60):
 
     ax.set_title(title, fontsize=25)
     ax.set_xticks(range(len(xs)))
-    # ax.set_xticklabels(xs, rotation=rotation)
     if rotation != 0:
         ax.set_xticklabels(xs, rotation=rotation, ha='right')
     else:
@@ -483,8 +548,6 @@ def plot_sensor_data(xs, ys, title, ylabel, filename, rotation=60):
     ax.grid()
     ax.ticklabel_format(style='plain', axis='y')
     ax.get_yaxis().get_offset_text().set_visible(False)
-    # ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, _: f'{int(x)}'))
-    # ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, _: f'{x:.1f}')) 
     ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, _: f'{int(round(x))}'))
     ax.legend()
 
@@ -500,79 +563,225 @@ def plot_sensor_data(xs, ys, title, ylabel, filename, rotation=60):
     fig.savefig(filename)
     print(f"グラフ保存: {filename}")
 
-def aggregate_monthly_data(data, months):
-    monthly_data = []
-    days_per_month = len(data) // months
-    for i in range(months):
-        chunk = data[i*days_per_month:(i+1)*days_per_month]
-        if chunk:
-            avg = sum(chunk) / len(chunk)
-        else:
-            avg = 0
-        monthly_data.append(avg)
-    return monthly_data
+def create_graphs(start_date, end_date):
+    # 保存先のディレクトリを指定
+    image_folder = os.path.join(application.static_folder, 'images')
+    if not os.path.exists(image_folder):
+        os.makedirs(image_folder)
+    
+    days_diff = (end_date - start_date).days + 1
+    dev_data = get_sensor_data(start_date, end_date, '開発ルーム')
+    meet_data = get_sensor_data(start_date, end_date, '小会議室')
 
-def create_all_graphs():
-    for period, days in [('weekly', 7), ('monthly', 30), ('3months', 90), ('6months', 180), ('yearly', 365)]:
-        dev_data, start_dev, _ = get_sensor_data(days, '開発ルーム')
-        meet_data, _, _ = get_sensor_data(days, '小会議室')
+    image_paths = []
 
+    if days_diff == 1:
+        # --- 1日のデータ: 時間単位 ---
+        # get_sensor_data() から [(hour, temp, hum, pres), ...] の形式で返る
+        xs = [row[0] for row in dev_data]
+        temp_dev = [row[1] for row in dev_data]
+        hum_dev = [row[2] for row in dev_data]
+        pres_dev = [row[3] for row in dev_data]
+
+        temp_meet = [row[1] for row in meet_data]
+        hum_meet = [row[2] for row in meet_data]
+        pres_meet = [row[3] for row in meet_data]
+
+    elif days_diff <= 31:
+        # --- 日単位データ (カレンダー通り) ---
         temp_dev, hum_dev, pres_dev = process_sensor_data(dev_data)
         temp_meet, hum_meet, pres_meet = process_sensor_data(meet_data)
 
-        if days >= 90:
-            # データを月平均に変換
-            months = days // 30
-            temp_dev = aggregate_monthly_data(temp_dev, months)
-            hum_dev = aggregate_monthly_data(hum_dev, months)
-            pres_dev = aggregate_monthly_data(pres_dev, months)
+        # 開始日から31日分の日付を作成
+        xs = [(start_date + timedelta(days=i)).strftime('%Y-%m-%d') for i in range(days_diff)]
 
-            temp_meet = aggregate_monthly_data(temp_meet, months)
-            hum_meet = aggregate_monthly_data(hum_meet, months)
-            pres_meet = aggregate_monthly_data(pres_meet, months)
+        # 月ごとにデータをまとめる
+        temp_dev_full = []
+        hum_dev_full = []
+        pres_dev_full = []
+        temp_meet_full = []
+        hum_meet_full = []
+        pres_meet_full = []
 
-            # x軸は常に12ヶ月固定（現在から過去12ヶ月）
-            xs = [(datetime.now() - timedelta(days=30*i)).strftime('%Y/%m') for i in range(11, -1, -1)]
+        current_month = start_date.month
 
-            # yデータは不足分をNoneで前詰め
-            def pad_to_12months(data):
-                return [None] * (12 - len(data)) + data
+        for i, _ in enumerate(xs):
+            current_date = start_date + timedelta(days=i)
+            if current_date.month != current_month:
+                # 月が変わった場合、次の月に切り替え
+                current_month = current_date.month
 
-            temp_dev = pad_to_12months(temp_dev)
-            hum_dev = pad_to_12months(hum_dev)
-            pres_dev = pad_to_12months(pres_dev)
+            # 元のデータを月ごとに配列に追加
+            temp_dev_full.append(temp_dev[i] if i < len(temp_dev) else None)
+            hum_dev_full.append(hum_dev[i] if i < len(hum_dev) else None)
+            pres_dev_full.append(pres_dev[i] if i < len(pres_dev) else None)
+            temp_meet_full.append(temp_meet[i] if i < len(temp_meet) else None)
+            hum_meet_full.append(hum_meet[i] if i < len(hum_meet) else None)
+            pres_meet_full.append(pres_meet[i] if i < len(pres_meet) else None)
 
-            temp_meet = pad_to_12months(temp_meet)
-            hum_meet = pad_to_12months(hum_meet)
-            pres_meet = pad_to_12months(pres_meet)
+        # 最後にまとめたデータを利用して処理
+        temp_dev = temp_dev_full
+        hum_dev = hum_dev_full
+        pres_dev = pres_dev_full
+        temp_meet = temp_meet_full
+        hum_meet = hum_meet_full
+        pres_meet = pres_meet_full
+
+    elif days_diff <= 90:
+        # --- 週単位 ---
+        temp_dev, hum_dev, pres_dev = process_sensor_data(dev_data)
+        temp_meet, hum_meet, pres_meet = process_sensor_data(meet_data)
+
+        temp_dev = aggregate_weekly_data(temp_dev)
+        hum_dev = aggregate_weekly_data(hum_dev)
+        pres_dev = aggregate_weekly_data(pres_dev)
+        temp_meet = aggregate_weekly_data(temp_meet)
+        hum_meet = aggregate_weekly_data(hum_meet)
+        pres_meet = aggregate_weekly_data(pres_meet)
+
+        weeks = days_diff // 7
+        remaining_days = days_diff % 7
+
+        # 週部分のx軸（週の開始日だけ）
+        xs_weeks = [
+            (start_date + timedelta(days=i * 7)).strftime('%Y-%m-%d')
+            for i in range(weeks)
+        ]
+
+        # 余り日部分のx軸（日単位）
+        remaining_days_start_date = start_date + timedelta(days=weeks * 7)
+        xs_remaining_days = [
+            (remaining_days_start_date + timedelta(days=i)).strftime('%Y-%m-%d')
+            for i in range(remaining_days)
+        ]
+
+        # もしremaining_days == 0ならば、end_date（最終日）をxs_weeksに追加
+        if remaining_days == 0:
+            xs_weeks.append(end_date.strftime('%Y-%m-%d'))
+
+        # 最終的なx軸
+        xs = xs_weeks + xs_remaining_days
+
+    # 既存のコード（そのまま追加する部分）
+    elif days_diff >= 91:
+        # --- 月単位集計 + 残り日処理 ---
+        temp_dev, hum_dev, pres_dev = process_sensor_data(dev_data)
+        temp_meet, hum_meet, pres_meet = process_sensor_data(meet_data)
+
+        # 月単位データ
+        temp_dev_month = aggregate_monthly_data(temp_dev, start_date, end_date)
+        hum_dev_month = aggregate_monthly_data(hum_dev, start_date, end_date)
+        pres_dev_month = aggregate_monthly_data(pres_dev, start_date, end_date)
+        temp_meet_month = aggregate_monthly_data(temp_meet, start_date, end_date)
+        hum_meet_month = aggregate_monthly_data(hum_meet, start_date, end_date)
+        pres_meet_month = aggregate_monthly_data(pres_meet, start_date, end_date)
+
+        # 月ラベル（YYYY-MM）
+        month_labels = []
+        cur = start_date.replace(day=1)
+        while cur < end_date:
+            month_labels.append(cur.strftime('%Y-%m'))
+            if cur.month == 12:
+                cur = cur.replace(year=cur.year + 1, month=1)
+            else:
+                cur = cur.replace(month=cur.month + 1)
+
+        # 残り日を抽出
+        last_month_start = end_date.replace(day=1)
+        remaining_days = (end_date - last_month_start).days + 1
+        last_month_data_temp = temp_dev[-remaining_days:]
+        last_month_data_hum = hum_dev[-remaining_days:]
+        last_month_data_pres = pres_dev[-remaining_days:]
+        
+        # 余りが7日以上なら週単位、未満なら日単位
+        extra_labels = []
+        extra_temp_dev = []
+        extra_hum_dev = []
+        extra_pres_dev = []
+        extra_temp_meet = []
+        extra_hum_meet = []
+        extra_pres_meet = []
+
+        if remaining_days >= 7:
+            # 週単位
+            weeks = remaining_days // 7
+            for i in range(weeks):
+                week_start = last_month_start + timedelta(days=i * 7)
+                label = week_start.strftime('%Y-%m-%d')
+                extra_labels.append(label)
+
+                temp_chunk = last_month_data_temp[i*7:(i+1)*7]
+                hum_chunk = last_month_data_hum[i*7:(i+1)*7]
+                pres_chunk = last_month_data_pres[i*7:(i+1)*7]
+
+                extra_temp_dev.append(sum(temp_chunk) / len(temp_chunk))
+                extra_hum_dev.append(sum(hum_chunk) / len(hum_chunk))
+                extra_pres_dev.append(sum(pres_chunk) / len(pres_chunk))
+
+                # 小会議室のデータも同様
+                temp_chunk_meet = temp_meet[-remaining_days:][i*7:(i+1)*7]
+                hum_chunk_meet = hum_meet[-remaining_days:][i*7:(i+1)*7]
+                pres_chunk_meet = pres_meet[-remaining_days:][i*7:(i+1)*7]
+                extra_temp_meet.append(sum(temp_chunk_meet) / len(temp_chunk_meet))
+                extra_hum_meet.append(sum(hum_chunk_meet) / len(hum_chunk_meet))
+                extra_pres_meet.append(sum(pres_chunk_meet) / len(pres_chunk_meet))
+
+            # 残り日（7日未満）
+            leftover_days = remaining_days % 7
+            if leftover_days > 0:
+                for j in range(leftover_days):
+                    day = last_month_start + timedelta(days=weeks*7 + j)
+                    label = day.strftime('%Y-%m-%d')
+                    extra_labels.append(label)
+
+                    idx = weeks*7 + j
+                    extra_temp_dev.append(last_month_data_temp[idx])
+                    extra_hum_dev.append(last_month_data_hum[idx])
+                    extra_pres_dev.append(last_month_data_pres[idx])
+                    extra_temp_meet.append(temp_meet[-remaining_days:][idx])
+                    extra_hum_meet.append(hum_meet[-remaining_days:][idx])
+                    extra_pres_meet.append(pres_meet[-remaining_days:][idx])
+
         else:
-            xs = [(start_dev + timedelta(days=i)).strftime('%Y-%m-%d') for i in range(days)]
+            # 日単位
+            for i in range(remaining_days):
+                day = last_month_start + timedelta(days=i)
+                label = day.strftime('%Y-%m-%d')
+                extra_labels.append(label)
 
-        plot_sensor_data(xs, [(temp_dev, '開発ルーム'), (temp_meet, '小会議室')],
-                 '温度', 'Temperature (°C)', f'images/{period}_temperature.png')
+                extra_temp_dev.append(last_month_data_temp[i])
+                extra_hum_dev.append(last_month_data_hum[i])
+                extra_pres_dev.append(last_month_data_pres[i])
+                extra_temp_meet.append(temp_meet[-remaining_days:][i])
+                extra_hum_meet.append(hum_meet[-remaining_days:][i])
+                extra_pres_meet.append(pres_meet[-remaining_days:][i])
 
-        plot_sensor_data(xs, [(hum_dev, '開発ルーム'), (hum_meet, '小会議室')],
-                 '湿度', 'Humidity (%)', f'images/{period}_humidity.png')
+        # X軸ラベル
+        xs = month_labels + extra_labels
 
-        plot_sensor_data(xs, [(pres_dev, '開発ルーム'), (pres_meet, '小会議室')],
-                 '気圧', 'Pressure (hPa)', f'images/{period}_pressure.png')
+        # 各データ列結合
+        temp_dev = temp_dev_month + extra_temp_dev
+        hum_dev = hum_dev_month + extra_hum_dev
+        pres_dev = pres_dev_month + extra_pres_dev
 
-def save_sensor_data_to_csv(data, filename='output.csv'):
-    
-    write_header = not os.path.exists(filename)
+        temp_meet = temp_meet_month + extra_temp_meet
+        hum_meet = hum_meet_month + extra_hum_meet
+        pres_meet = pres_meet_month + extra_pres_meet
 
-    with open(filename, 'a', newline='', encoding='utf-8') as csvfile:
-        writer = csv.writer(csvfile)
-        if write_header:
-            writer.writerow(['日付', '時刻', '部屋名', '温度', '湿度', '気圧'])
+    # --- グラフ出力 ---
+    temp_image_path = os.path.join(image_folder, 'temperature_chart.png')
+    plot_sensor_data(xs, [(temp_dev, '開発ルーム'), (temp_meet, '小会議室')], '温度', 'Temperature (°C)', temp_image_path)
+    image_paths.append('/images/images/temperature_chart.png')
 
-        for row in data:
-            writer.writerow(row)
+    hum_image_path = os.path.join(image_folder, 'humidity_chart.png')
+    plot_sensor_data(xs, [(hum_dev, '開発ルーム'), (hum_meet, '小会議室')], '湿度', 'Humidity (%)', hum_image_path)
+    image_paths.append('/images/images/humidity_chart.png')
 
-    print(f"CSVに保存しました: {filename}")
+    pres_image_path = os.path.join(image_folder, 'pressure_chart.png')
+    plot_sensor_data(xs, [(pres_dev, '開発ルーム'), (pres_meet, '小会議室')], '気圧', 'Pressure (hPa)', pres_image_path)
+    image_paths.append('/images/images/pressure_chart.png')
+
+    return image_paths
 
 if __name__ == "__main__":
-    insert_fake_sensor_data()
-    create_all_graphs()
-    print("全期間のグラフが生成されました。")
-    serve(application, host="localhost", port=5000)
+    serve(application, host="127.0.0.1", port=8000)
